@@ -11,12 +11,20 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes as Attr
+import Html.Events as HtmlEvents
+import Json.Decode as Decode
 import Task
 
 
 type alias Word =
     { id : Int
     , word : String
+    }
+
+
+type alias GridPosition =
+    { left : Float
+    , top : Float
     }
 
 
@@ -27,6 +35,7 @@ type alias Model =
     , dragging : Maybe Int
     , over : Maybe Int
     , viewportWidth : Int
+    , gridPosition : Maybe GridPosition
     }
 
 
@@ -38,6 +47,7 @@ init _ =
       , dragging = Nothing
       , over = Nothing
       , viewportWidth = 1024
+      , gridPosition = Nothing
       }
     , Dom.getViewport
         |> Task.attempt GotViewport
@@ -55,6 +65,12 @@ emptyWords =
         |> List.map (\i -> { id = i, word = "" })
 
 
+getGridPosition : Cmd Msg
+getGridPosition =
+    Dom.getElement "word-grid"
+        |> Task.attempt GotGridPosition
+
+
 type Msg
     = InputChanged String
     | DragStart Int
@@ -62,6 +78,9 @@ type Msg
     | DragEnd
     | GotViewport (Result Dom.Error Dom.Viewport)
     | WindowResized Int Int
+    | GotGridPosition (Result Dom.Error Dom.Element)
+    | PointerDown Int
+    | PointerMove Float Float
 
 
 inputToWords : String -> List Word
@@ -171,54 +190,113 @@ swapById aId bId words =
             words
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputChanged newText ->
-            { model
-                | input = newText
-                , words = inputToWords newText
-                , canShowError =
-                    if validateInput newText then
-                        False
+            let
+                nextModel =
+                    { model
+                        | input = newText
+                        , words = inputToWords newText
+                        , canShowError =
+                            if validateInput newText then
+                                False
 
-                    else
-                        True
-            }
+                            else
+                                True
+                    }
+            in
+            ( nextModel, getGridPosition )
 
         DragStart tileId ->
-            { model | dragging = Just tileId, over = Just tileId }
+            ( { model | dragging = Just tileId, over = Just tileId }, Cmd.none )
 
         DragEnter tileId ->
             case model.dragging of
                 Nothing ->
-                    model
+                    ( model, Cmd.none )
 
                 Just _ ->
-                    { model | over = Just tileId }
+                    ( { model | over = Just tileId }, Cmd.none )
 
         DragEnd ->
             case ( model.dragging, model.over ) of
                 ( Just idA, Just idB ) ->
-                    { model
+                    ( { model
                         | words = swapById idA idB model.words
                         , dragging = Nothing
                         , over = Nothing
-                    }
+                      }
+                    , Cmd.none
+                    )
 
                 _ ->
-                    { model | dragging = Nothing, over = Nothing }
+                    ( { model | dragging = Nothing, over = Nothing }, Cmd.none )
 
         GotViewport result ->
             case result of
                 Ok viewport ->
-                    { model | viewportWidth = round viewport.viewport.width }
+                    ( { model | viewportWidth = round viewport.viewport.width }, getGridPosition )
 
                 Err _ ->
-                    model
+                    ( model, Cmd.none )
 
         WindowResized width _ ->
-            { model | viewportWidth = width }
+            ( { model | viewportWidth = width }, getGridPosition )
+
+        GotGridPosition result ->
+            case result of
+                Ok el ->
+                    ( { model | gridPosition = Just { left = el.element.x, top = el.element.y } }, Cmd.none )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        PointerDown tileId ->
+            ( { model | dragging = Just tileId, over = Just tileId }, Cmd.none )
+
+        PointerMove x y ->
+            case ( model.dragging, model.gridPosition ) of
+                ( Just _, Just pos ) ->
+                    let
+                        sizes =
+                            layoutSizes model
+
+                        spacing =
+                            8
+
+                        relX =
+                            x - pos.left
+
+                        relY =
+                            y - pos.top
+
+                        width =
+                            toFloat sizes.tileWidth + toFloat spacing
+
+                        height =
+                            toFloat sizes.tileHeight + toFloat spacing
+
+                        column =
+                            floor (relX / width) |> clamp 0 3
+
+                        row =
+                            floor (relY / height) |> clamp 0 3
+
+                        tileIndex =
+                            row * 4 + column
+
+                        targetId =
+                            model.words
+                                |> List.drop tileIndex
+                                |> List.head
+                                |> Maybe.map .id
+                    in
+                    ( { model | over = targetId }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 type alias LayoutSizes =
@@ -342,6 +420,10 @@ viewWordTile model sizes index word =
             , Events.onMouseDown (DragStart word.id)
             , Events.onMouseEnter (DragEnter word.id)
             , Events.onMouseUp DragEnd
+            , Element.htmlAttribute (HtmlEvents.on "pointerdown" (Decode.succeed (PointerDown word.id)))
+            , Element.htmlAttribute (HtmlEvents.on "pointermove" (Decode.map2 PointerMove (Decode.field "clientX" Decode.float) (Decode.field "clientY" Decode.float)))
+            , Element.htmlAttribute (HtmlEvents.on "pointerup" (Decode.succeed DragEnd))
+            , Element.htmlAttribute (Attr.style "touch-action" "none")
             ]
 
         dragAttrs =
@@ -400,6 +482,8 @@ view model =
                 , Events.onMouseUp DragEnd
                 , Element.htmlAttribute (Attr.style "user-select" "none")
                 , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
+                , Element.htmlAttribute (Attr.id "word-grid")
+                , Element.htmlAttribute (Attr.style "touch-action" "none")
                 ]
                 (model.words |> List.indexedMap (\i w -> viewWordTile model sizes i w))
             , Input.text
@@ -427,7 +511,7 @@ main : Program () Model Msg
 main =
     Browser.element
         { init = init
-        , update = \msg model -> ( update msg model, Cmd.none )
+        , update = update
         , subscriptions = subscriptions
         , view =
             \model ->
