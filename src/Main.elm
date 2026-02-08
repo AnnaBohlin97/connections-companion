@@ -10,14 +10,14 @@ import Element.Font
 import Element.Input
 
 
-type alias Tile =
+type alias Word =
     { id : Int
     , word : String
     }
 
 
 type alias Model =
-    { words : List Tile
+    { words : List Word
     , input : String
     , canShowError : Bool
     , dragging : Maybe Int
@@ -27,7 +27,7 @@ type alias Model =
 
 init : Model
 init =
-    { words = emptyTiles
+    { words = emptyWords
     , input = ""
     , canShowError = False
     , dragging = Nothing
@@ -35,17 +35,17 @@ init =
     }
 
 
-emptyTiles : List Tile
-emptyTiles =
+emptyWords : List Word
+emptyWords =
     List.range 0 15
         |> List.map (\i -> { id = i, word = "" })
 
 
-inputToWords : String -> List Tile
+inputToWords : String -> List Word
 inputToWords input =
     let
-        provided : List Tile
-        provided =
+        wordsInInput : List Word
+        wordsInInput =
             input
                 |> String.split ","
                 |> List.take 16
@@ -58,20 +58,19 @@ inputToWords input =
 
         missingCount : Int
         missingCount =
-            16 - List.length provided
+            16 - List.length wordsInInput
 
-        padded : List Tile
-        padded =
-            if missingCount <= 0 then
-                provided
-
-            else
-                provided
-                    ++ (List.range (List.length provided) 15
-                            |> List.map (\i -> { id = i, word = "" })
-                       )
+        withEmptyWords words =
+            words
+                ++ (List.range (List.length wordsInInput) 15
+                        |> List.map (\i -> { id = i, word = "" })
+                   )
     in
-    padded
+    if missingCount == 0 then
+        wordsInInput
+
+    else
+        wordsInInput |> withEmptyWords
 
 
 type Msg
@@ -98,8 +97,8 @@ validateInput input =
     List.length wordList <= 16 && not (hasDuplicates wordList)
 
 
-findIndex : Int -> List Tile -> Maybe Int
-findIndex targetId tiles =
+findIndex : Int -> List Word -> Maybe Int
+findIndex targetId words =
     let
         step index remaining =
             case remaining of
@@ -113,18 +112,18 @@ findIndex targetId tiles =
                     else
                         step (index + 1) tail
     in
-    step 0 tiles
+    step 0 words
 
 
-swapAt : Int -> Int -> List Tile -> List Tile
-swapAt i j tiles =
+swapAt : Int -> Int -> List Word -> List Word
+swapAt i j words =
     if i == j then
-        tiles
+        words
 
     else
         let
             arr =
-                Array.fromList tiles
+                Array.fromList words
 
             a =
                 Array.get i arr
@@ -145,14 +144,14 @@ swapAt i j tiles =
         Array.toList swapped
 
 
-swapById : Int -> Int -> List Tile -> List Tile
-swapById aId bId tiles =
-    case ( findIndex aId tiles, findIndex bId tiles ) of
+swapById : Int -> Int -> List Word -> List Word
+swapById aId bId words =
+    case ( findIndex aId words, findIndex bId words ) of
         ( Just i, Just j ) ->
-            swapAt i j tiles
+            swapAt i j words
 
         _ ->
-            tiles
+            words
 
 
 update : Msg -> Model -> Model
@@ -194,23 +193,41 @@ update msg model =
                     { model | dragging = Nothing, over = Nothing }
 
 
-viewTile : Model -> Tile -> Element Msg
-viewTile model tile =
+viewWordTile : Model -> Int -> Word -> Element Msg
+viewWordTile model index word =
     let
         isDragging =
-            model.dragging == Just tile.id
+            model.dragging == Just word.id
 
         isOver =
-            model.over == Just tile.id
+            model.over == Just word.id
+
+        row : Int
+        row =
+            index // 4
+
+        backgroundColor =
+            case row of
+                0 ->
+                    rgba255 249 223 109 1
+
+                1 ->
+                    rgba255 160 195 90 1
+
+                2 ->
+                    rgba255 176 196 239 1
+
+                _ ->
+                    rgba255 186 129 197 1
 
         baseAttrs =
-            [ Element.width (px 200)
-            , Element.Background.color (rgba255 245 126 215 1)
-            , Element.padding 30
-            , Element.Border.rounded 12
+            [ Element.width (px 150)
+            , Element.height (px 80)
+            , Element.Background.color backgroundColor
+            , Element.Border.rounded 6
             , Element.Font.center
-            , Events.onMouseDown (DragStart tile.id)
-            , Events.onMouseEnter (DragEnter tile.id)
+            , Events.onMouseDown (DragStart word.id)
+            , Events.onMouseEnter (DragEnter word.id)
             , Events.onMouseUp DragEnd
             ]
 
@@ -229,7 +246,12 @@ viewTile model tile =
                 []
     in
     Element.el (baseAttrs ++ dragAttrs ++ overAttrs)
-        (Element.text tile.word)
+        (Element.el
+            [ Element.centerX
+            , Element.centerY
+            ]
+            (Element.text word.word)
+        )
 
 
 view : Model -> Element Msg
@@ -238,11 +260,11 @@ view model =
         [ Element.column [ Element.centerY, Element.centerX, Element.spacing 24 ]
             [ Element.el [ Element.width Element.fill, Element.Font.center ] (Element.text "Connections Companion")
             , Element.wrappedRow
-                [ Element.width (px 824)
+                [ Element.width (px 624)
                 , Element.spacing 8
                 , Events.onMouseUp DragEnd
                 ]
-                (model.words |> List.map (viewTile model))
+                (model.words |> List.indexedMap (\i w -> viewWordTile model i w))
             , Element.Input.text
                 [ Element.Border.rounded 12 ]
                 { onChange = InputChanged, text = model.input, placeholder = Nothing, label = Element.Input.labelHidden "" }
