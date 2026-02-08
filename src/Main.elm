@@ -84,7 +84,7 @@ inputToWords input =
         wordsInInput =
             input
                 |> String.toUpper
-                |> String.split ","
+                |> String.split "\n"
                 |> List.take 16
                 |> List.indexedMap
                     (\index word ->
@@ -462,7 +462,7 @@ view model =
 
         bodyFontSize =
             if isMobile model.viewportWidth then
-                14
+                16
 
             else
                 20
@@ -471,7 +471,7 @@ view model =
         [ Element.column [ Element.width (px sizes.gridWidth), Element.centerY, Element.centerX, Element.spacing 24 ]
             [ Element.el
                 [ Element.width Element.fill, Font.center, Font.size headerFontSize, Font.bold ]
-                (Element.text "Connections Companion:\nSort your words before submitting!")
+                (Element.text "Connections Companion:\nSort Your Words Before Submitting!")
             , Element.paragraph
                 [ Font.center, Font.size bodyFontSize ]
                 [ Element.text "Enter today's words, drag and drop the tiles to sort them, and feel confident submitting your Connections!" ]
@@ -483,16 +483,17 @@ view model =
                 , Element.htmlAttribute (Attr.id "word-grid")
                 , Element.htmlAttribute (Attr.style "touch-action" "none")
                 ]
-                (model.words |> List.indexedMap (\i w -> viewWordTile model sizes i w))
-            , Input.text
+                (model.words |> List.indexedMap (\index word -> viewWordTile model sizes index word))
+            , Input.multiline
                 [ Border.rounded 12 ]
                 { onChange = InputChanged
                 , text = model.input
-                , placeholder = Just (Input.placeholder [ Font.size bodyFontSize ] (Element.text "Type today's words here, separated by commas"))
+                , placeholder = Just (Input.placeholder [ Font.size bodyFontSize ] (Element.text "Type today's words here, separated by newlines..."))
                 , label = Input.labelHidden "Today's words"
+                , spellcheck = False
                 }
             , if model.canShowError then
-                Element.text "Please enter no more than 16 unique words, separated by commas."
+                Element.text "Please enter no more than 16 unique words, separated by newlines."
 
               else
                 Element.none
