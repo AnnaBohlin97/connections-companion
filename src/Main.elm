@@ -55,6 +55,15 @@ emptyWords =
         |> List.map (\i -> { id = i, word = "" })
 
 
+type Msg
+    = InputChanged String
+    | DragStart Int
+    | DragEnter Int
+    | DragEnd
+    | GotViewport (Result Dom.Error Dom.Viewport)
+    | WindowResized Int Int
+
+
 inputToWords : String -> List Word
 inputToWords input =
     let
@@ -86,15 +95,6 @@ inputToWords input =
 
     else
         wordsInInput |> withEmptyWords
-
-
-type Msg
-    = InputChanged String
-    | DragStart Int
-    | DragEnter Int
-    | DragEnd
-    | GotViewport (Result Dom.Error Dom.Viewport)
-    | WindowResized Int Int
 
 
 validateInput : String -> Bool
@@ -199,9 +199,9 @@ update msg model =
 
         DragEnd ->
             case ( model.dragging, model.over ) of
-                ( Just aId, Just bId ) ->
+                ( Just idA, Just idB ) ->
                     { model
-                        | words = swapById aId bId model.words
+                        | words = swapById idA idB model.words
                         , dragging = Nothing
                         , over = Nothing
                     }
