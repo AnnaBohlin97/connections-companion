@@ -39,6 +39,12 @@ type alias Model =
     }
 
 
+emptyWords : List Word
+emptyWords =
+    List.range 0 15
+        |> List.map (\i -> { id = i, word = "" })
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { words = emptyWords
@@ -54,23 +60,6 @@ init _ =
     )
 
 
-isMobile : Int -> Bool
-isMobile viewportWidth =
-    viewportWidth <= 440
-
-
-emptyWords : List Word
-emptyWords =
-    List.range 0 15
-        |> List.map (\i -> { id = i, word = "" })
-
-
-getGridPosition : Cmd Msg
-getGridPosition =
-    Dom.getElement "word-grid"
-        |> Task.attempt GotGridPosition
-
-
 type Msg
     = InputChanged String
     | DragStart Int
@@ -83,10 +72,15 @@ type Msg
     | PointerMove Float Float
 
 
+getGridPosition : Cmd Msg
+getGridPosition =
+    Dom.getElement "word-grid"
+        |> Task.attempt GotGridPosition
+
+
 inputToWords : String -> List Word
 inputToWords input =
     let
-        wordsInInput : List Word
         wordsInInput =
             input
                 |> String.toUpper
@@ -99,7 +93,6 @@ inputToWords input =
                         }
                     )
 
-        missingCount : Int
         missingCount =
             16 - List.length wordsInInput
 
@@ -297,6 +290,11 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+
+isMobile : Int -> Bool
+isMobile viewportWidth =
+    viewportWidth <= 440
 
 
 type alias LayoutSizes =
@@ -523,7 +521,3 @@ main =
                     ]
                     (view model)
         }
-
-
-
--- hej, jag, heter, anna, och, det, här, är, alla, ord, som, ska, vara, med, i, listan
