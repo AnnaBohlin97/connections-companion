@@ -12178,19 +12178,15 @@ var $author$project$Main$inputToWords = function (input) {
 	var missingCount = 16 - $elm$core$List$length(wordsInInput);
 	return (!missingCount) ? wordsInInput : withEmptyWords(wordsInInput);
 };
-var $author$project$Main$isMobile = function (viewportWidth) {
-	return viewportWidth <= 440;
-};
 var $author$project$Main$layoutSizes = function (model) {
 	var spacing = 8;
 	var maxTileWidth = 150;
-	var maxTileHeight = 150;
 	var horizontalPadding = 16;
 	var usableWidth = A2($elm$core$Basics$max, 0, model.viewportWidth - (2 * horizontalPadding));
 	var candidateTileWidth = ((usableWidth - (3 * spacing)) / 4) | 0;
 	var tileWidth = A3($elm$core$Basics$clamp, 80, maxTileWidth, candidateTileWidth);
 	var gridWidth = (4 * tileWidth) + (3 * spacing);
-	var tileHeight = $author$project$Main$isMobile(model.viewportWidth) ? tileWidth : A3($elm$core$Basics$clamp, 44, maxTileHeight, ((tileWidth * maxTileHeight) / maxTileWidth) | 0);
+	var tileHeight = tileWidth;
 	return {gridWidth: gridWidth, tileHeight: tileHeight, tileWidth: tileWidth};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
@@ -12616,6 +12612,9 @@ var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
 var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
 var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $elm$html$Html$Attributes$id = _VirtualDom_attribute('id');
+var $author$project$Main$isMobile = function (viewportWidth) {
+	return viewportWidth <= 440;
+};
 var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
 	return {$: 'HiddenLabel', a: a};
 };
