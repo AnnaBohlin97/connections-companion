@@ -5,5 +5,8 @@
 .idea/httpRequests/
 .idea/dataSources*
 
+# Elm
+elm-stuff/
+
 # OS
 .DS_Store
