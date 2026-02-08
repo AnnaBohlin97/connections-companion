@@ -2,6 +2,8 @@ module Main exposing (main)
 
 import Array
 import Browser
+import Browser.Dom as Dom
+import Browser.Events
 import Element exposing (Element, px, rgba255)
 import Element.Background as Background
 import Element.Border as Border
@@ -9,6 +11,7 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Html.Attributes as Attr
+import Task
 
 
 type alias Word =
@@ -23,17 +26,22 @@ type alias Model =
     , canShowError : Bool
     , dragging : Maybe Int
     , over : Maybe Int
+    , viewportWidth : Int
     }
 
 
-init : Model
-init =
-    { words = emptyWords
-    , input = ""
-    , canShowError = False
-    , dragging = Nothing
-    , over = Nothing
-    }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( { words = emptyWords
+      , input = ""
+      , canShowError = False
+      , dragging = Nothing
+      , over = Nothing
+      , viewportWidth = 1024
+      }
+    , Dom.getViewport
+        |> Task.attempt GotViewport
+    )
 
 
 emptyWords : List Word
@@ -80,6 +88,8 @@ type Msg
     | DragStart Int
     | DragEnter Int
     | DragEnd
+    | GotViewport (Result Dom.Error Dom.Viewport)
+    | WindowResized Int Int
 
 
 validateInput : String -> Bool
@@ -194,9 +204,70 @@ update msg model =
                 _ ->
                     { model | dragging = Nothing, over = Nothing }
 
+        GotViewport result ->
+            case result of
+                Ok viewport ->
+                    { model | viewportWidth = round viewport.viewport.width }
 
-viewWordTile : Model -> Int -> Word -> Element Msg
-viewWordTile model index word =
+                Err _ ->
+                    model
+
+        WindowResized width _ ->
+            { model | viewportWidth = width }
+
+
+type alias LayoutSizes =
+    { tileWidth : Int
+    , tileHeight : Int
+    , gridWidth : Int
+    }
+
+
+layoutSizes : Model -> LayoutSizes
+layoutSizes model =
+    let
+        spacing =
+            8
+
+        maxTileWidth =
+            150
+
+        maxTileHeight =
+            150
+
+        horizontalPadding =
+            16
+
+        usableWidth =
+            max 0 (model.viewportWidth - (2 * horizontalPadding))
+
+        isMobile =
+            model.viewportWidth < 500
+
+        -- 4 columns: 4 tiles + 3 gaps
+        candidateTileWidth =
+            (usableWidth - (3 * spacing)) // 4
+
+        tileWidth =
+            clamp 80 maxTileWidth candidateTileWidth
+
+        tileHeight =
+            if isMobile then
+                -- Square tiles on mobile (1:1).
+                tileWidth
+
+            else
+                -- Desktop ratio 80/150.
+                clamp 44 maxTileHeight ((tileWidth * maxTileHeight) // maxTileWidth)
+
+        gridWidth =
+            (4 * tileWidth) + (3 * spacing)
+    in
+    { tileWidth = tileWidth, tileHeight = tileHeight, gridWidth = gridWidth }
+
+
+viewWordTile : Model -> LayoutSizes -> Int -> Word -> Element Msg
+viewWordTile model sizes index word =
     let
         isDragging =
             model.dragging == Just word.id
@@ -240,8 +311,8 @@ viewWordTile model index word =
                 14
 
         baseAttrs =
-            [ Element.width (px 150)
-            , Element.height (px 80)
+            [ Element.width (px sizes.tileWidth)
+            , Element.height (px sizes.tileHeight)
             , Element.htmlAttribute (Attr.style "user-select" "none")
             , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
             , Background.color backgroundColor
@@ -277,13 +348,31 @@ viewWordTile model index word =
 
 view : Model -> Element Msg
 view model =
+    let
+        sizes =
+            layoutSizes model
+
+        headerFontSize =
+            if model.viewportWidth < 500 then
+                20
+
+            else
+                32
+
+        bodyFontSize =
+            if model.viewportWidth < 500 then
+                14
+
+            else
+                20
+    in
     Element.column [ Element.width Element.fill, Element.height Element.fill ]
-        [ Element.column [ Element.width (px 624), Element.centerY, Element.centerX, Element.spacing 24 ]
+        [ Element.column [ Element.width (px sizes.gridWidth), Element.centerY, Element.centerX, Element.spacing 24 ]
             [ Element.el
-                [ Element.width Element.fill, Font.center, Font.size 32, Font.bold ]
+                [ Element.width Element.fill, Font.center, Font.size headerFontSize, Font.bold ]
                 (Element.text "Connections Companion:\nSort your words before submitting!")
             , Element.paragraph
-                [ Font.center ]
+                [ Font.center, Font.size bodyFontSize ]
                 [ Element.text "Enter today's words, drag and drop the tiles to sort them, and feel confident submitting your Connections!" ]
             , Element.wrappedRow
                 [ Element.spacing 8
@@ -291,12 +380,12 @@ view model =
                 , Element.htmlAttribute (Attr.style "user-select" "none")
                 , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
                 ]
-                (model.words |> List.indexedMap (\i w -> viewWordTile model i w))
+                (model.words |> List.indexedMap (\i w -> viewWordTile model sizes i w))
             , Input.text
                 [ Border.rounded 12 ]
                 { onChange = InputChanged
                 , text = model.input
-                , placeholder = Just (Input.placeholder [] (Element.text "Type today's words here, separated by commas"))
+                , placeholder = Just (Input.placeholder [ Font.size bodyFontSize ] (Element.text "Type today's words here, separated by commas"))
                 , label = Input.labelHidden "Today's words"
                 }
             , if model.canShowError then
@@ -308,11 +397,17 @@ view model =
         ]
 
 
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Browser.Events.onResize WindowResized
+
+
 main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
-        , update = update
+        , update = \msg model -> ( update msg model, Cmd.none )
+        , subscriptions = subscriptions
         , view =
             \model ->
                 Element.layout
