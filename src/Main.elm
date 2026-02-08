@@ -8,6 +8,7 @@ import Element.Border
 import Element.Events as Events
 import Element.Font
 import Element.Input
+import Html.Attributes as Attr
 
 
 type alias Word =
@@ -223,6 +224,8 @@ viewWordTile model index word =
         baseAttrs =
             [ Element.width (px 150)
             , Element.height (px 80)
+            , Element.htmlAttribute (Attr.style "user-select" "none")
+            , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
             , Element.Background.color backgroundColor
             , Element.Border.rounded 6
             , Element.Font.center
@@ -263,6 +266,8 @@ view model =
                 [ Element.width (px 624)
                 , Element.spacing 8
                 , Events.onMouseUp DragEnd
+                , Element.htmlAttribute (Attr.style "user-select" "none")
+                , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
                 ]
                 (model.words |> List.indexedMap (\i w -> viewWordTile model i w))
             , Element.Input.text
