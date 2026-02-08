@@ -278,11 +278,15 @@ viewWordTile model index word =
 view : Model -> Element Msg
 view model =
     Element.column [ Element.width Element.fill, Element.height Element.fill ]
-        [ Element.column [ Element.centerY, Element.centerX, Element.spacing 24 ]
-            [ Element.el [ Element.width Element.fill, Font.center ] (Element.text "Connections Companion")
+        [ Element.column [ Element.width (px 624), Element.centerY, Element.centerX, Element.spacing 24 ]
+            [ Element.el
+                [ Element.width Element.fill, Font.center, Font.size 32, Font.bold ]
+                (Element.text "Connections Companion:\nSort your words before submitting!")
+            , Element.paragraph
+                [ Font.center ]
+                [ Element.text "Enter today's words, drag and drop the tiles to sort them, and feel confident submitting your Connections!" ]
             , Element.wrappedRow
-                [ Element.width (px 624)
-                , Element.spacing 8
+                [ Element.spacing 8
                 , Events.onMouseUp DragEnd
                 , Element.htmlAttribute (Attr.style "user-select" "none")
                 , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
@@ -290,7 +294,11 @@ view model =
                 (model.words |> List.indexedMap (\i w -> viewWordTile model i w))
             , Input.text
                 [ Border.rounded 12 ]
-                { onChange = InputChanged, text = model.input, placeholder = Nothing, label = Input.labelHidden "" }
+                { onChange = InputChanged
+                , text = model.input
+                , placeholder = Just (Input.placeholder [] (Element.text "Type today's words here, separated by commas"))
+                , label = Input.labelHidden "Today's words"
+                }
             , if model.canShowError then
                 Element.text "Please enter no more than 16 unique words, separated by commas."
 
