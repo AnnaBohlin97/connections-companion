@@ -313,9 +313,6 @@ layoutSizes model =
         maxTileWidth =
             150
 
-        maxTileHeight =
-            150
-
         horizontalPadding =
             16
 
@@ -330,13 +327,7 @@ layoutSizes model =
             clamp 80 maxTileWidth candidateTileWidth
 
         tileHeight =
-            if isMobile model.viewportWidth then
-                -- Square tiles on mobile (1:1).
-                tileWidth
-
-            else
-                -- Desktop ratio 80/150.
-                clamp 44 maxTileHeight ((tileWidth * maxTileHeight) // maxTileWidth)
+            tileWidth
 
         gridWidth =
             (4 * tileWidth) + (3 * spacing)
