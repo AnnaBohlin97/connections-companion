@@ -222,6 +222,23 @@ viewWordTile model index word =
                 _ ->
                     rgba255 186 129 197 1
 
+        fontSize =
+            let
+                length =
+                    String.length word.word
+            in
+            if length <= 8 then
+                20
+
+            else if length <= 9 then
+                18
+
+            else if length <= 10 then
+                16
+
+            else
+                14
+
         baseAttrs =
             [ Element.width (px 150)
             , Element.height (px 80)
@@ -230,7 +247,6 @@ viewWordTile model index word =
             , Background.color backgroundColor
             , Border.rounded 6
             , Font.center
-            , Font.semiBold
             , Events.onMouseDown (DragStart word.id)
             , Events.onMouseEnter (DragEnter word.id)
             , Events.onMouseUp DragEnd
@@ -255,7 +271,7 @@ viewWordTile model index word =
             [ Element.centerX
             , Element.centerY
             ]
-            (Element.text word.word)
+            (Element.paragraph [ Font.size fontSize ] [ Element.text word.word ])
         )
 
 
