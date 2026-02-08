@@ -3,11 +3,11 @@ module Main exposing (main)
 import Array
 import Browser
 import Element exposing (Element, px, rgba255)
-import Element.Background
-import Element.Border
+import Element.Background as Background
+import Element.Border as Border
 import Element.Events as Events
-import Element.Font
-import Element.Input
+import Element.Font as Font
+import Element.Input as Input
 import Html.Attributes as Attr
 
 
@@ -48,6 +48,7 @@ inputToWords input =
         wordsInInput : List Word
         wordsInInput =
             input
+                |> String.toUpper
                 |> String.split ","
                 |> List.take 16
                 |> List.indexedMap
@@ -226,9 +227,10 @@ viewWordTile model index word =
             , Element.height (px 80)
             , Element.htmlAttribute (Attr.style "user-select" "none")
             , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
-            , Element.Background.color backgroundColor
-            , Element.Border.rounded 6
-            , Element.Font.center
+            , Background.color backgroundColor
+            , Border.rounded 6
+            , Font.center
+            , Font.semiBold
             , Events.onMouseDown (DragStart word.id)
             , Events.onMouseEnter (DragEnter word.id)
             , Events.onMouseUp DragEnd
@@ -243,7 +245,7 @@ viewWordTile model index word =
 
         overAttrs =
             if not isDragging && isOver then
-                [ Element.Border.width 2 ]
+                [ Border.width 2 ]
 
             else
                 []
@@ -261,7 +263,7 @@ view : Model -> Element Msg
 view model =
     Element.column [ Element.width Element.fill, Element.height Element.fill ]
         [ Element.column [ Element.centerY, Element.centerX, Element.spacing 24 ]
-            [ Element.el [ Element.width Element.fill, Element.Font.center ] (Element.text "Connections Companion")
+            [ Element.el [ Element.width Element.fill, Font.center ] (Element.text "Connections Companion")
             , Element.wrappedRow
                 [ Element.width (px 624)
                 , Element.spacing 8
@@ -270,9 +272,9 @@ view model =
                 , Element.htmlAttribute (Attr.style "-webkit-user-select" "none")
                 ]
                 (model.words |> List.indexedMap (\i w -> viewWordTile model i w))
-            , Element.Input.text
-                [ Element.Border.rounded 12 ]
-                { onChange = InputChanged, text = model.input, placeholder = Nothing, label = Element.Input.labelHidden "" }
+            , Input.text
+                [ Border.rounded 12 ]
+                { onChange = InputChanged, text = model.input, placeholder = Nothing, label = Input.labelHidden "" }
             , if model.canShowError then
                 Element.text "Please enter no more than 16 unique words, separated by commas."
 
@@ -289,7 +291,12 @@ main =
         , update = update
         , view =
             \model ->
-                Element.layout []
+                Element.layout
+                    [ Font.family
+                        [ Font.typeface "Libre Franklin"
+                        , Font.sansSerif
+                        ]
+                    ]
                     (view model)
         }
 
