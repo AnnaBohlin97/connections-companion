@@ -44,6 +44,11 @@ init _ =
     )
 
 
+isMobile : Int -> Bool
+isMobile viewportWidth =
+    viewportWidth <= 440
+
+
 emptyWords : List Word
 emptyWords =
     List.range 0 15
@@ -241,9 +246,6 @@ layoutSizes model =
         usableWidth =
             max 0 (model.viewportWidth - (2 * horizontalPadding))
 
-        isMobile =
-            model.viewportWidth < 500
-
         -- 4 columns: 4 tiles + 3 gaps
         candidateTileWidth =
             (usableWidth - (3 * spacing)) // 4
@@ -252,7 +254,7 @@ layoutSizes model =
             clamp 80 maxTileWidth candidateTileWidth
 
         tileHeight =
-            if isMobile then
+            if isMobile model.viewportWidth then
                 -- Square tiles on mobile (1:1).
                 tileWidth
 
@@ -298,7 +300,26 @@ viewWordTile model sizes index word =
                 length =
                     String.length word.word
             in
-            if length <= 8 then
+            if isMobile model.viewportWidth then
+                if length <= 5 then
+                    20
+
+                else if length == 6 then
+                    18
+
+                else if length == 7 then
+                    16
+
+                else if length == 8 then
+                    14
+
+                else if length == 9 then
+                    12
+
+                else
+                    10
+
+            else if length <= 8 then
                 20
 
             else if length <= 9 then
@@ -353,14 +374,14 @@ view model =
             layoutSizes model
 
         headerFontSize =
-            if model.viewportWidth < 500 then
+            if isMobile model.viewportWidth then
                 20
 
             else
                 32
 
         bodyFontSize =
-            if model.viewportWidth < 500 then
+            if isMobile model.viewportWidth then
                 14
 
             else
