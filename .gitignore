@@ -1,0 +1,9 @@
+# Rider / JetBrains
+.idea/copilot.*
+.idea/indexLayout.xml
+.idea/shelf/
+.idea/httpRequests/
+.idea/dataSources*
+
+# OS
+.DS_Store
